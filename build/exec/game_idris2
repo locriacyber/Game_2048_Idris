@@ -1,4 +1,0 @@
-#!/bin/sh
-
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`dirname $0`/game_idris2_app
-`dirname $0`/game_idris2_app/game_idris2.so $*

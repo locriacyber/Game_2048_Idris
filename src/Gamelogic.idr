@@ -1,19 +1,24 @@
-module Main
-
-import Data.Primitives.Views
+module Gamelogic
 import Data.Vect
-import Data.Nat
-import System
 
-transposeMat : {n : _} -> Vect m (Vect n elem) -> Vect n (Vect m elem)
+import Data.Nat
+import Data.Bits
+
+public export
+Matrix : Nat -> Nat -> Type -> Type
+Matrix m n a = Vect m (Vect n a)
+
+transposeMat : {n : _} -> Vect m (Vect n a) -> Vect n (Vect m a)
 transposeMat [] = replicate _ []
 transposeMat ([]::_) = []
 transposeMat ((x :: xs) :: xss) = (x :: map head xss) :: transposeMat (xs :: map tail xss)
+transposeMat (_ :: _) = ?transposeMat_missing_case_1
 
-reverseMat : Vect n (Vect m elem) -> Vect n (Vect m elem)
+reverseMat : Vect n (Vect m a) -> Vect n (Vect m a)
 reverseMat [] = []
 reverseMat (x :: xs) = reverse x :: reverseMat xs
 
+public export
 data Action = Up | Down | Left | Right | Restart | Exit
 
 moveLeft : {m : _} -> Vect n (Vect m Int) -> Vect n (Vect m Int)
@@ -33,19 +38,23 @@ moveLeft (x :: xs) = (myTighten $ myMerge $ myTighten x) :: moveLeft xs where
                                                    [x+y, 0] ++ myMerge ys
                                                 else x :: myMerge (y :: ys)
 
+export
 moves: {m, n : _} -> Action -> Vect n (Vect m Int) -> Vect n (Vect m Int)
 moves Left  = moveLeft
 moves Right = reverseMat . moveLeft . reverseMat
 moves Up    = transposeMat . moveLeft . transposeMat
 moves Down  = transposeMat . moves Right . transposeMat
+moves Restart = ?moves_missing_case_1
+moves Exit = ?moves_missing_case_2
 
 movePossible: {m, n : _} -> Vect n (Vect m Int) -> Bool
 movePossible x = moves Left x /= x || moves Right x /= x ||
                  moves Up   x /= x || moves Down  x /= x
 
-
+public export
 data GameState = GameWin | GameOver | GameContinue
 
+public export
 gameWinOver : {m, n : _} -> Vect n (Vect m Int) -> Int -> GameState
 gameWinOver x winvalue = case hasNum x winvalue of
                               True => GameWin
@@ -69,6 +78,7 @@ countZero : Vect n (Vect m Int) -> Int
 countZero [] = 0
 countZero (x :: xs) = countRowZero x + countZero xs
 
+export
 addNum : Vect n (Vect m Int) -> Int -> Int -> Vect n (Vect m Int)
 addNum [] _ _ = []
 addNum (x :: xs) num pos = case countRowZero x < pos of
@@ -83,13 +93,16 @@ addNum (x :: xs) num pos = case countRowZero x < pos of
                                                       False => [num] ++ xs
                                          False => [x] ++ addRowNum xs num pos
 
+export
 randoms : Int -> Stream Int
 randoms seed = let seed' = 1664525 * seed + 1013904223 in
                    abs (seed' `shiftR` 2) :: randoms seed'
 
+export
 arithInput : Int -> Int -> Int
 arithInput x y = (\x => mod x y + 1) x
                         
+export
 initMat : (seed : Int) -> (n : Nat) -> (m : Nat) -> Vect n (Vect m Int)
 initMat seed n m  = let numPos = fromList $ take 4 $ randoms seed in
                         initHelper n m (TwoFour $ arithInput (index 0 numPos) 10) 
@@ -111,10 +124,8 @@ initMat seed n m  = let numPos = fromList $ take 4 $ randoms seed in
       natToInt (S k) = 1+(natToInt k);
 
 
-initMatIO : Vect n (Vect m Int) -> IO (Vect n (Vect m Int))
-initMatIO x = pure x
-
-printMat : Vect n (Vect m Int) -> IO()
+export
+printMat : Vect n (Vect m Int) -> IO ()
 printMat [] = putStrLn " "
 printMat (x :: xs) = do printRow x
                         putStrLn ""
@@ -125,67 +136,10 @@ printMat (x :: xs) = do printRow x
       printRow (x :: xs) = do putStr (show x ++ "  ")
                               printRow xs
 
-data RunIO : Type where
-     Quit : RunIO
-     Do : IO a -> (a -> Inf (RunIO )) -> RunIO
+export
+twoFour : Int -> Int
+twoFour x = if (arithInput x 10) > 8 then 4 else 2
 
-(>>=) : IO a -> (a -> Inf (RunIO)) -> RunIO
-(>>=) = Do
-
-data Fuel = Dry | More (Lazy Fuel)
-
-run : Fuel -> RunIO -> IO ()
-run fuel Quit = pure ()
-run (More fuel) (Do c f) = do res <- c
-                              run fuel (f res)
-run Dry p = pure ()
-
-partial
-forever : Fuel
-forever = More forever
-
-game2048 : {n,m : _ } -> Stream Int -> (Vect n (Vect m Int)) -> RunIO
-game2048 (num :: pos :: rands) x =
-         do case gameWinOver x 2048 of
-              GameWin => do putStrLn "Congratulations! You win the game!"
-                            Quit
-              GameOver => do putStrLn "Sorry! You lose the game!"
-                             Quit
-              GameContinue => do putStrLn "The game continues!"
-                                 act <- getLine
-                                 case act of
-                                      "w" => if moves Up x == x then game2048 rands x else
-                                             do newmat <- pure (addNum (moves Up x) (TwoFour num) (posAvail pos x))
-                                                printMat newmat
-                                                game2048 rands newmat
-                                      "s" => if moves Down x == x then game2048 rands x else
-                                             do newmat <- pure $ addNum (moves Down x) (TwoFour num) (posAvail pos x)
-                                                printMat newmat
-                                                game2048 rands newmat
-                                      "a" => if moves Left x == x then game2048 rands x else
-                                             do newmat <- pure $ addNum (moves Left x) (TwoFour num) (posAvail pos x)
-                                                printMat newmat
-                                                game2048 rands newmat
-                                      "d" => if moves Right x == x then game2048 rands x else
-                                             do newmat <- pure $ addNum (moves Right x) (TwoFour num) (posAvail pos x)
-                                                printMat newmat
-                                                game2048 rands newmat
-                                      _   => do putStrLn "The right operation is 'wasd'! "
-                                                game2048 rands x
-    where
-      TwoFour : Int -> Int
-      TwoFour x = if (arithInput x 10) > 8 then 4 else 2
-
-      posAvail : Int -> Vect n (Vect m Int) -> Int
-      posAvail x mat = arithInput x (countZero mat)
-
-partial
-main : IO()
-main = do seed <- time
-          putStrLn "Welcome to 2048 game!"
-          startMat <- pure (initMat (fromInteger seed) 4 4)
-          printMat startMat
-          usleep 1000000
-          seed1 <- time
-          run forever (game2048 (randoms (fromInteger seed1)) startMat)
-          putStrLn "Game end"
+export
+posAvail : Int -> Vect n (Vect m Int) -> Int
+posAvail x mat = arithInput x (countZero mat)
