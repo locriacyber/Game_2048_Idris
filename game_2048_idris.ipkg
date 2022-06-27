@@ -13,13 +13,13 @@ authors = "XStargate (Xin Song)"
 -- langversion
 
 -- packages to add to search path
--- depends =
+depends = tailrec, freer, eff
 
 -- modules to install
 -- modules = 
 
 -- main file (i.e. file to load at REPL)
-main = Main
+main = ConsoleInterface
 
 -- name of executable
 -- executable =
