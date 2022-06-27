@@ -3,7 +3,6 @@ module GameLoop
 import Effects
 import System
 import Gamelogic
-import Data.IORef
 import Types
 
 gameLoop : Fuel -> {n,m : Nat } -> Matrix n m Int -> Eff [PlayerInput, DisplayInfo, Random Int] ()
