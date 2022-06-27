@@ -45,5 +45,4 @@ partial
 main : IO ()
 main = do
    let seed = cast !time
-   rng <- createRng seed
-   runEff [handleInput, handleDisplay, rng] (main_pure forever)
+   runEff [handleInput, handleDisplay] (handleRandom seed $ main_pure forever)
