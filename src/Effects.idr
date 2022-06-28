@@ -4,6 +4,13 @@ import public Control.Eff
 import Types
 
 
+-- ||| call/cc
+-- public export
+-- data Cont : Type -> Type where
+--    CallNext :  -> Cont ()
+-- 
+-- callNext : Has Cont fs => m a -> Eff fs (m a)
+
 
 ||| @{a} random element type
 public export

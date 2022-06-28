@@ -9,6 +9,7 @@ import WebContext
 import JS
 import Web.Dom
 import Web.Html
+import Web.Raw.UIEvents
 
 -- %foreign "javascript:lambda:(s)=>window.prompt(s)"
 -- export
@@ -43,16 +44,11 @@ handleDisplay ctx (DisplayLine line) = do
 -- nextKeyEvent : KeyboardEvent -> JSIO ()
 -- let handler : KeyboardEventHandler = callback nextKeyEvent
 
-prompt : JSContext -> String -> JSIO (Maybe String)
-prompt ctx message = do
-   Window.prompt ctx.window (Def message) Undef
-
-
-handleInput : JSContext -> PlayerInput a -> JSIO a
-handleInput ctx RequestOne = do
-   Just act <- prompt ctx "Choose: wasd q"
-   | Nothing => pure Invalid
-   pure $ case act of
+handleInput : JSContext -> Has JSIO fs => PlayerInput v -> (v -> Eff fs a) -> Eff fs a
+handleInput ctx RequestOne resume = do
+   keyevent <- send ctx.poll_key
+   key_s <- send $ KeyboardEvent.key keyevent
+   resume $ case key_s of
       "w" => Movement Up
       "s" => Movement Down
       "a" => Movement Left
@@ -66,7 +62,9 @@ mainJS = do
    let seed = cast !time
    ctx <- try_make_ctx
    let main_cont0 = handleRandom seed $ main_pure forever
-   runEff [handleInput ctx, handleDisplay ctx] main_cont0
+   let main_cont1 = lift1 {f=JSIO} main_cont0
+   let main_cont2 = handle {f=PlayerInput} (handleInput ctx) main_cont1
+   runEff [id, handleDisplay ctx] main_cont2
 
 
 partial

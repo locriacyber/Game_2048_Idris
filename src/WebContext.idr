@@ -17,6 +17,7 @@ record JSContext where
    window : Window
    el_matrix : Matrix 4 4 Element
    el_log : Element
+   poll_key : Lazy (JSIO KeyboardEvent)
 
 --------
 -- helpers for try_make_ctx
@@ -66,4 +67,5 @@ try_make_ctx = do
    | _ => fatal "node_not_element"
    el_vect <- assert_length 16 el_list
    let el_matrix = stack {m=4} {n=4} el_vect
-   pure $ MkJSContext {window} {el_matrix} {el_log}
+   let poll_key = ?poll0
+   pure $ MkJSContext {window} {el_matrix} {el_log} {poll_key}
