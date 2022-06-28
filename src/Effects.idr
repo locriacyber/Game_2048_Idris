@@ -23,7 +23,7 @@ randomVect (S n) = [| randomInt :: randomVect n |]
 public export
 data DisplayInfo : Type -> Type where
    DisplayLine : String -> DisplayInfo ()
-   DisplayMatrix : Matrix _ _ Int -> DisplayInfo ()
+   DisplayMatrix : {m, n: Nat} -> Matrix m n Int -> DisplayInfo ()
 
 export
 info : Has (DisplayInfo) es => String -> Eff es ()
@@ -31,8 +31,9 @@ info = send . DisplayLine
 
 export
 displayState : 
+   {m, n: Nat} ->
    Has (DisplayInfo) es => 
-   Matrix _ _ Int ->
+   Matrix m n Int ->
    Eff es ()
 displayState = send . DisplayMatrix
 

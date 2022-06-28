@@ -13,7 +13,7 @@ authors = "XStargate (Xin Song)"
 -- langversion
 
 -- packages to add to search path
-depends = tailrec, freer, eff
+depends = tailrec, freer, eff, sop, dom
 
 -- modules to install
 -- modules = 
